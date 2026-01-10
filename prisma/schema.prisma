@@ -1,0 +1,123 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(MEMBER)
+  balance       Decimal   @default(0) @db.Decimal(10, 2)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts     Account[]
+  sessions     Session[]
+  transactions Transaction[]
+  payments     Payment[]
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  name        String
+  price       Decimal     @db.Decimal(10, 2)
+  category    Category
+  isActive    Boolean     @default(true)
+  description String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  transactions Transaction[]
+}
+
+model BarSession {
+  id        String             @id @default(cuid())
+  date      DateTime           @default(now())
+  isActive  Boolean            @default(true)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  transactions Transaction[]
+  payments     Payment[]
+}
+
+model Transaction {
+  id           String     @id @default(cuid())
+  userId       String
+  productId    String
+  sessionId    String
+  quantity     Int        @default(1)
+  unitPrice    Decimal    @db.Decimal(10, 2)
+  totalAmount  Decimal    @db.Decimal(10, 2)
+  createdAt    DateTime   @default(now())
+
+  user    User       @relation(fields: [userId], references: [id])
+  product Product    @relation(fields: [productId], references: [id])
+  session BarSession @relation(fields: [sessionId], references: [id])
+}
+
+model Payment {
+  id        String     @id @default(cuid())
+  userId    String
+  sessionId String?
+  amount    Decimal    @db.Decimal(10, 2)
+  type      PaymentType @default(CASH)
+  createdAt DateTime   @default(now())
+
+  user    User        @relation(fields: [userId], references: [id])
+  session BarSession? @relation(fields: [sessionId], references: [id])
+}
+
+enum Role {
+  MEMBER
+  ADMIN
+}
+
+enum Category {
+  DRINK
+  FOOD
+}
+
+enum PaymentType {
+  CASH
+  CARD
+  TRANSFER
+}
