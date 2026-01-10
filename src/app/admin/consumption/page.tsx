@@ -340,28 +340,26 @@ export default function AdminConsumption() {
                                                     minute: '2-digit'
                                                 })}
                                             </div>
-                                            <div className={`font-medium text-xs px-2 py-1 rounded-full inline-block ${
-                                                item.type === 'transaction' 
-                                                    ? 'bg-red-100 text-red-700' 
+                                            <div className={`font-medium text-xs px-2 py-1 rounded-full inline-block ${item.type === 'transaction'
+                                                    ? 'bg-red-100 text-red-700'
                                                     : 'bg-green-100 text-green-700'
-                                            }`}>
+                                                }`}>
                                                 {item.type === 'transaction' ? 'Achat' : 'Paiement'}
                                             </div>
                                             <div className="font-medium">
-                                                {item.type === 'transaction' && item.product 
-                                                    ? item.product.name 
-                                                    : item.type === 'payment' 
-                                                        ? `Rechargement (${item.paymentType})` 
+                                                {item.type === 'transaction' && item.product
+                                                    ? item.product.name
+                                                    : item.type === 'payment'
+                                                        ? `Rechargement (${item.paymentType})`
                                                         : 'N/A'
                                                 }
                                             </div>
                                             <div>
                                                 {item.type === 'transaction' ? item.quantity || 1 : '-'}
                                             </div>
-                                            <div className={`font-semibold ${
-                                                item.type === 'transaction' ? 'text-red-600' : 'text-green-600'
-                                            }`}>
-                                                {item.type === 'transaction' 
+                                            <div className={`font-semibold ${item.type === 'transaction' ? 'text-red-600' : 'text-green-600'
+                                                }`}>
+                                                {item.type === 'transaction'
                                                     ? `-${Number(item.totalAmount || 0).toFixed(2)}€`
                                                     : `+${Number(item.amount || 0).toFixed(2)}€`
                                                 }

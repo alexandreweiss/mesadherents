@@ -69,7 +69,7 @@ export async function GET(
                 createdAt: p.createdAt
             }))
         ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          .slice(0, 20) // Take only the 20 most recent items
+            .slice(0, 20) // Take only the 20 most recent items
 
         return NextResponse.json(history)
     } catch (error) {

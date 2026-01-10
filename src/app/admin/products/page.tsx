@@ -38,7 +38,7 @@ export default function AdminProducts() {
         category: 'DRINK',
         description: ''
     })
-    const [processing, setProcessing] = useState<{[key: string]: boolean}>({})
+    const [processing, setProcessing] = useState<{ [key: string]: boolean }>({})
 
     useEffect(() => {
         if (status === 'unauthenticated') {
@@ -140,7 +140,7 @@ export default function AdminProducts() {
             })
 
             if (response.ok) {
-                setProducts(prev => prev.map(p => 
+                setProducts(prev => prev.map(p =>
                     p.id === productId ? { ...p, isActive: false } : p
                 ))
                 alert('Produit supprimé avec succès!')
@@ -278,9 +278,9 @@ export default function AdminProducts() {
                                         <Input
                                             id="name"
                                             value={editingProduct ? editingProduct.name : newProduct.name}
-                                            onChange={(e) => editingProduct 
-                                                ? setEditingProduct({...editingProduct, name: e.target.value})
-                                                : setNewProduct({...newProduct, name: e.target.value})
+                                            onChange={(e) => editingProduct
+                                                ? setEditingProduct({ ...editingProduct, name: e.target.value })
+                                                : setNewProduct({ ...newProduct, name: e.target.value })
                                             }
                                             required
                                         />
@@ -294,8 +294,8 @@ export default function AdminProducts() {
                                             min="0"
                                             value={editingProduct ? editingProduct.price : newProduct.price}
                                             onChange={(e) => editingProduct
-                                                ? setEditingProduct({...editingProduct, price: parseFloat(e.target.value) || 0})
-                                                : setNewProduct({...newProduct, price: parseFloat(e.target.value) || 0})
+                                                ? setEditingProduct({ ...editingProduct, price: parseFloat(e.target.value) || 0 })
+                                                : setNewProduct({ ...newProduct, price: parseFloat(e.target.value) || 0 })
                                             }
                                             required
                                         />
@@ -306,8 +306,8 @@ export default function AdminProducts() {
                                             id="category"
                                             value={editingProduct ? editingProduct.category : newProduct.category}
                                             onChange={(e) => editingProduct
-                                                ? setEditingProduct({...editingProduct, category: e.target.value})
-                                                : setNewProduct({...newProduct, category: e.target.value})
+                                                ? setEditingProduct({ ...editingProduct, category: e.target.value })
+                                                : setNewProduct({ ...newProduct, category: e.target.value })
                                             }
                                             className="w-full p-2 border rounded-md"
                                             required
@@ -322,20 +322,20 @@ export default function AdminProducts() {
                                             id="description"
                                             value={editingProduct ? (editingProduct.description || '') : newProduct.description}
                                             onChange={(e) => editingProduct
-                                                ? setEditingProduct({...editingProduct, description: e.target.value})
-                                                : setNewProduct({...newProduct, description: e.target.value})
+                                                ? setEditingProduct({ ...editingProduct, description: e.target.value })
+                                                : setNewProduct({ ...newProduct, description: e.target.value })
                                             }
                                             placeholder="Description optionnelle"
                                         />
                                     </div>
                                 </div>
                                 <div className="flex space-x-2">
-                                    <Button 
-                                        type="submit" 
+                                    <Button
+                                        type="submit"
                                         disabled={processing.create || (editingProduct && processing[editingProduct.id])}
                                     >
-                                        {processing.create || (editingProduct && processing[editingProduct.id]) 
-                                            ? 'Traitement...' 
+                                        {processing.create || (editingProduct && processing[editingProduct.id])
+                                            ? 'Traitement...'
                                             : editingProduct ? 'Modifier' : 'Créer'
                                         }
                                     </Button>
@@ -380,11 +380,10 @@ export default function AdminProducts() {
                                                 {Number(product.price).toFixed(2)}€
                                             </td>
                                             <td className="py-2">
-                                                <span className={`px-2 py-1 rounded-full text-xs ${
-                                                    product.category === 'DRINK' 
-                                                        ? 'bg-blue-100 text-blue-800' 
+                                                <span className={`px-2 py-1 rounded-full text-xs ${product.category === 'DRINK'
+                                                        ? 'bg-blue-100 text-blue-800'
                                                         : 'bg-green-100 text-green-800'
-                                                }`}>
+                                                    }`}>
                                                     {product.category === 'DRINK' ? 'Boisson' : 'Nourriture'}
                                                 </span>
                                             </td>
