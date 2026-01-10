@@ -71,7 +71,7 @@ export default function RecentTransactions() {
                                     </div>
                                 </div>
                                 <div className="text-red-600 font-medium">
-                                    -{transaction.totalAmount.toFixed(2)}€
+                                    -{Number(transaction.totalAmount).toFixed(2)}€
                                 </div>
                             </div>
                         ))}

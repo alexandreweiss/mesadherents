@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        const { amount, type = 'CASH', sessionId } = await request.json()
+        const { amount, type = 'CASH', sessionId, userId } = await request.json()
 
         if (!amount || amount <= 0) {
             return NextResponse.json(
@@ -24,10 +24,13 @@ export async function POST(request: NextRequest) {
             )
         }
 
+        // Determine target user - admin can pay for others, regular users pay for themselves
+        const targetUserId = (session.user.role === 'ADMIN' && userId) ? userId : session.user.id
+
         // Create payment record
         const payment = await prisma.payment.create({
             data: {
-                userId: session.user.id,
+                userId: targetUserId,
                 amount: parseFloat(amount),
                 type,
                 sessionId
@@ -36,7 +39,7 @@ export async function POST(request: NextRequest) {
 
         // Update user balance
         await prisma.user.update({
-            where: { id: session.user.id },
+            where: { id: targetUserId },
             data: {
                 balance: {
                     increment: parseFloat(amount)

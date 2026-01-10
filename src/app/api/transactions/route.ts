@@ -15,13 +15,30 @@ export async function POST(request: NextRequest) {
             )
         }
 
-        const { productId, quantity = 1 } = await request.json()
+        const { productId, quantity = 1, userId } = await request.json()
 
         if (!productId) {
             return NextResponse.json(
                 { error: 'Product ID is required' },
                 { status: 400 }
             )
+        }
+
+        // Determine target user - admin can create transactions for others, regular users for themselves
+        const targetUserId = (session.user.role === 'ADMIN' && userId) ? userId : session.user.id
+
+        // If admin is creating transaction for another user, verify the target user exists
+        if (session.user.role === 'ADMIN' && userId) {
+            const targetUser = await prisma.user.findUnique({
+                where: { id: userId }
+            })
+
+            if (!targetUser || !targetUser.isActive) {
+                return NextResponse.json(
+                    { error: 'Target user not found or inactive' },
+                    { status: 404 }
+                )
+            }
         }
 
         // Get the product
@@ -63,7 +80,7 @@ export async function POST(request: NextRequest) {
 
         const transaction = await prisma.transaction.create({
             data: {
-                userId: session.user.id,
+                userId: targetUserId,
                 productId,
                 sessionId: barSession.id,
                 quantity,
@@ -77,7 +94,7 @@ export async function POST(request: NextRequest) {
 
         // Update user balance
         await prisma.user.update({
-            where: { id: session.user.id },
+            where: { id: targetUserId },
             data: {
                 balance: {
                     decrement: totalAmount

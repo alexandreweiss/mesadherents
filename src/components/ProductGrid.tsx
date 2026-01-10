@@ -69,7 +69,7 @@ export default function ProductGrid() {
                             <CardContent className="p-4">
                                 <div className="text-center">
                                     <h4 className="font-medium">{product.name}</h4>
-                                    <p className="text-sm text-gray-600">{product.price}€</p>
+                                    <p className="text-sm text-gray-600">{Number(product.price).toFixed(2)}€</p>
                                     <Button
                                         onClick={() => addToCart(product.id)}
                                         className="w-full mt-2"
@@ -92,7 +92,7 @@ export default function ProductGrid() {
                             <CardContent className="p-4">
                                 <div className="text-center">
                                     <h4 className="font-medium">{product.name}</h4>
-                                    <p className="text-sm text-gray-600">{product.price}€</p>
+                                    <p className="text-sm text-gray-600">{Number(product.price).toFixed(2)}€</p>
                                     <Button
                                         onClick={() => addToCart(product.id)}
                                         className="w-full mt-2"

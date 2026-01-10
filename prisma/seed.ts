@@ -35,11 +35,15 @@ async function main() {
     ]
 
     for (const product of products) {
-        await prisma.product.upsert({
+        const existingProduct = await prisma.product.findFirst({
             where: { name: product.name },
-            update: {},
-            create: product,
         })
+
+        if (!existingProduct) {
+            await prisma.product.create({
+                data: product,
+            })
+        }
     }
 
     console.log('Database seeded successfully!')

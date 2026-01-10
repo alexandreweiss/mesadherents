@@ -4,12 +4,6 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog'
 
 interface PaymentDialogProps {
     open: boolean
@@ -19,6 +13,8 @@ interface PaymentDialogProps {
 export default function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
     const [amount, setAmount] = useState('')
     const [isLoading, setIsLoading] = useState(false)
+
+    console.log('PaymentDialog rendered, open:', open)
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -51,41 +47,43 @@ export default function PaymentDialog({ open, onOpenChange }: PaymentDialogProps
     }
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Effectuer un paiement</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <Label htmlFor="amount">Montant (€)</Label>
-                        <Input
-                            id="amount"
-                            type="number"
-                            step="0.01"
-                            min="0.01"
-                            value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
-                            required
-                            className="mt-1"
-                            placeholder="0.00"
-                        />
-                    </div>
+        <>
+            {open && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                        <h2 className="text-xl font-semibold mb-4">Effectuer un paiement</h2>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <Label htmlFor="amount">Montant (€)</Label>
+                                <Input
+                                    id="amount"
+                                    type="number"
+                                    step="0.01"
+                                    min="0.01"
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                    required
+                                    className="mt-1"
+                                    placeholder="0.00"
+                                />
+                            </div>
 
-                    <div className="flex justify-end space-x-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => onOpenChange(false)}
-                        >
-                            Annuler
-                        </Button>
-                        <Button type="submit" disabled={isLoading}>
-                            {isLoading ? 'Traitement...' : 'Payer'}
-                        </Button>
+                            <div className="flex justify-end space-x-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => onOpenChange(false)}
+                                >
+                                    Annuler
+                                </Button>
+                                <Button type="submit" disabled={isLoading}>
+                                    {isLoading ? 'Traitement...' : 'Payer'}
+                                </Button>
+                            </div>
+                        </form>
                     </div>
-                </form>
-            </DialogContent>
-        </Dialog>
+                </div>
+            )}
+        </>
     )
 }

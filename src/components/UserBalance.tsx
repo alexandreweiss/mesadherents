@@ -55,7 +55,7 @@ export default function UserBalance() {
             <CardContent>
                 <div className="text-center">
                     <div className={`text-2xl font-bold ${balanceColor}`}>
-                        {user.balance.toFixed(2)}€
+                        {Number(user.balance).toFixed(2)}€
                     </div>
                     <div className="text-sm text-gray-600 mt-1">
                         {user.balance < 0 ? 'Solde débiteur' : 'Solde créditeur'}

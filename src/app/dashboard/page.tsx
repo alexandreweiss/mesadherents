@@ -47,8 +47,39 @@ export default function Dashboard() {
                             </p>
                         </div>
                         <div className="flex items-center space-x-4">
+                            {session.user?.role === 'ADMIN' && (
+                                <>
+                                    <Button
+                                        onClick={() => router.push('/admin/consumption')}
+                                        variant="outline"
+                                    >
+                                        Consommations
+                                    </Button>
+                                    <Button
+                                        onClick={() => router.push('/admin/products')}
+                                        variant="outline"
+                                    >
+                                        Produits
+                                    </Button>
+                                    <Button
+                                        onClick={() => router.push('/admin/balances')}
+                                        variant="outline"
+                                    >
+                                        Soldes
+                                    </Button>
+                                    <Button
+                                        onClick={() => router.push('/admin/users')}
+                                        variant="outline"
+                                    >
+                                        Membres
+                                    </Button>
+                                </>
+                            )}
                             <Button
-                                onClick={() => setShowPaymentDialog(true)}
+                                onClick={() => {
+                                    console.log('Pay button clicked, opening dialog...')
+                                    setShowPaymentDialog(true)
+                                }}
                                 variant="outline"
                             >
                                 Payer
