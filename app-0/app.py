@@ -1,0 +1,160 @@
+import os
+import csv
+import io
+import sqlite3
+from functools import wraps
+from flask import (
+    Flask, render_template, request, redirect,
+    url_for, session, Response, g
+)
+
+app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "changeme-secret-key")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "LaPalette")
+DATABASE = os.environ.get("DATABASE", "members.db")
+
+
+def get_db():
+    db = getattr(g, "_database", None)
+    if db is None:
+        db = g._database = sqlite3.connect(DATABASE)
+        db.row_factory = sqlite3.Row
+    return db
+
+
+@app.teardown_appcontext
+def close_connection(exception):
+    db = getattr(g, "_database", None)
+    if db is not None:
+        db.close()
+
+
+def init_db():
+    with app.app_context():
+        db = get_db()
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS members (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                first_name TEXT NOT NULL,
+                last_name TEXT NOT NULL,
+                email TEXT NOT NULL UNIQUE,
+                phone TEXT NOT NULL,
+                joined_at DATETIME DEFAULT (datetime('now'))
+            )
+        """)
+        db.commit()
+
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("admin"):
+            return redirect(url_for("admin_login"))
+        return f(*args, **kwargs)
+    return decorated
+
+
+@app.route("/", methods=["GET", "POST"])
+def index():
+    error = None
+    if request.method == "POST":
+        first = request.form.get("first_name", "").strip()
+        last = request.form.get("last_name", "").strip()
+        email = request.form.get("email", "").strip().lower()
+        phone = request.form.get("phone", "").strip()
+
+        if not all([first, last, email, phone]):
+            error = "Tous les champs sont obligatoires."
+        else:
+            db = get_db()
+            existing = db.execute(
+                "SELECT id FROM members WHERE email = ?", (email,)
+            ).fetchone()
+            if existing:
+                error = "Cette adresse email est déjà enregistrée."
+            else:
+                db.execute(
+                    "INSERT INTO members (first_name, last_name, email, phone) VALUES (?, ?, ?, ?)",
+                    (first, last, email, phone),
+                )
+                db.commit()
+                return redirect(url_for("success"))
+
+    return render_template("index.html", error=error)
+
+
+@app.route("/success")
+def success():
+    return render_template("success.html")
+
+
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login():
+    error = None
+    if request.method == "POST":
+        if request.form.get("password") == ADMIN_PASSWORD:
+            session["admin"] = True
+            return redirect(url_for("admin"))
+        error = "Mot de passe incorrect."
+    return render_template("admin_login.html", error=error)
+
+
+@app.route("/admin/logout")
+def admin_logout():
+    session.pop("admin", None)
+    return redirect(url_for("admin_login"))
+
+
+@app.route("/admin")
+@admin_required
+def admin():
+    db = get_db()
+    q = request.args.get("q", "").strip()
+    if q:
+        pattern = f"%{q}%"
+        members = db.execute(
+            """SELECT * FROM members
+               WHERE first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR phone LIKE ?
+               ORDER BY joined_at DESC""",
+            (pattern, pattern, pattern, pattern),
+        ).fetchall()
+    else:
+        members = db.execute(
+            "SELECT * FROM members ORDER BY joined_at DESC"
+        ).fetchall()
+    count = db.execute("SELECT COUNT(*) FROM members").fetchone()[0]
+    return render_template("admin.html", members=members, count=count, q=q)
+
+
+@app.route("/admin/export")
+@admin_required
+def admin_export():
+    db = get_db()
+    members = db.execute(
+        "SELECT first_name, last_name, email, phone, joined_at FROM members ORDER BY last_name, first_name"
+    ).fetchall()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Prénom", "Nom", "Email", "Téléphone", "Date d'inscription"])
+    for m in members:
+        writer.writerow(list(m))
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=membres.csv"},
+    )
+
+
+@app.route("/admin/delete/<int:member_id>", methods=["POST"])
+@admin_required
+def admin_delete(member_id):
+    db = get_db()
+    db.execute("DELETE FROM members WHERE id = ?", (member_id,))
+    db.commit()
+    return redirect(url_for("admin"))
+
+
+if __name__ == "__main__":
+    init_db()
+    app.run(host="0.0.0.0", port=5000)
