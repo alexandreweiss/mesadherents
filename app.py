@@ -39,9 +39,18 @@ def init_db():
                 last_name TEXT NOT NULL,
                 email TEXT NOT NULL UNIQUE,
                 phone TEXT NOT NULL,
+                code_postal TEXT NOT NULL DEFAULT '',
+                ville TEXT NOT NULL DEFAULT '',
+                whatsapp_gazette INTEGER NOT NULL DEFAULT 0,
+                email_newsletter INTEGER NOT NULL DEFAULT 0,
                 joined_at DATETIME DEFAULT (datetime('now'))
             )
         """)
+        for col, default in [("code_postal", "''"), ("ville", "''"), ("whatsapp_gazette", 0), ("email_newsletter", 0)]:
+            try:
+                db.execute(f"ALTER TABLE members ADD COLUMN {col} NOT NULL DEFAULT {default}")
+            except sqlite3.OperationalError:
+                pass
         db.commit()
 
 
@@ -62,8 +71,13 @@ def index():
         last = request.form.get("last_name", "").strip()
         email = request.form.get("email", "").strip().lower()
         phone = request.form.get("phone", "").strip()
+        code_postal = request.form.get("code_postal", "").strip()
+        ville = request.form.get("ville", "").strip()
 
-        if not all([first, last, email, phone]):
+        whatsapp = 1 if request.form.get("whatsapp_gazette") else 0
+        newsletter = 1 if request.form.get("email_newsletter") else 0
+
+        if not all([first, last, email, phone, code_postal, ville]):
             error = "Tous les champs sont obligatoires."
         else:
             db = get_db()
@@ -74,8 +88,8 @@ def index():
                 error = "Cette adresse email est déjà enregistrée."
             else:
                 db.execute(
-                    "INSERT INTO members (first_name, last_name, email, phone) VALUES (?, ?, ?, ?)",
-                    (first, last, email, phone),
+                    "INSERT INTO members (first_name, last_name, email, phone, code_postal, ville, whatsapp_gazette, email_newsletter) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (first, last, email, phone, code_postal, ville, whatsapp, newsletter),
                 )
                 db.commit()
                 return redirect(url_for("success"))
@@ -131,13 +145,16 @@ def admin():
 def admin_export():
     db = get_db()
     members = db.execute(
-        "SELECT first_name, last_name, email, phone, joined_at FROM members ORDER BY last_name, first_name"
+        "SELECT first_name, last_name, email, phone, code_postal, ville, whatsapp_gazette, email_newsletter, joined_at FROM members ORDER BY last_name, first_name"
     ).fetchall()
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Prénom", "Nom", "Email", "Téléphone", "Date d'inscription"])
+    writer.writerow(["Prénom", "Nom", "Email", "Téléphone", "Code postal", "Ville", "Whatsapp Gazette", "Email Newsletter", "Date d'inscription"])
     for m in members:
-        writer.writerow(list(m))
+        row = list(m)
+        row[6] = "Oui" if row[6] else "Non"
+        row[7] = "Oui" if row[7] else "Non"
+        writer.writerow(row)
     output.seek(0)
     return Response(
         output.getvalue(),

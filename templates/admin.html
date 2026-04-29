@@ -92,6 +92,10 @@
           <th>Nom</th>
           <th>Email</th>
           <th>Téléphone</th>
+          <th>CP</th>
+          <th>Ville</th>
+          <th>WhatsApp Gazette</th>
+          <th>Newsletter</th>
           <th>Inscription</th>
           <th></th>
         </tr>
@@ -103,6 +107,10 @@
           <td>{{ m.last_name }}</td>
           <td>{{ m.email }}</td>
           <td>{{ m.phone }}</td>
+          <td>{{ m.code_postal }}</td>
+          <td>{{ m.ville }}</td>
+          <td>{{ "✓" if m.whatsapp_gazette else "" }}</td>
+          <td>{{ "✓" if m.email_newsletter else "" }}</td>
           <td>{{ m.joined_at[:10] }}</td>
           <td>
             <form method="post" action="/admin/delete/{{ m.id }}"
@@ -112,7 +120,7 @@
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="6" class="empty">Aucun membre trouvé.</td></tr>
+        <tr><td colspan="10" class="empty">Aucun membre trouvé.</td></tr>
         {% endfor %}
       </tbody>
     </table>
