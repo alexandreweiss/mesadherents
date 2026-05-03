@@ -100,6 +100,10 @@ def init_db():
                 db.execute(f"ALTER TABLE members ADD COLUMN {col} REAL")
             except sqlite3.OperationalError:
                 pass
+        try:
+            db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_members_phone ON members (phone)")
+        except (sqlite3.OperationalError, sqlite3.IntegrityError):
+            pass
         db.commit()
 
 
@@ -241,6 +245,8 @@ def index():
             ).fetchone()
             if existing:
                 error = "Cette adresse email est déjà enregistrée."
+            elif db.execute("SELECT id FROM members WHERE phone = ?", (phone,)).fetchone():
+                error = "Ce numéro de téléphone est déjà enregistré."
             else:
                 db.execute(
                     "INSERT INTO members (first_name, last_name, date_naissance, email, phone, code_postal, ville, whatsapp_gazette, email_newsletter, facebook_updates, volunteer_contact, image_rights, membership_amount, payment_method, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -404,6 +410,8 @@ def api_register_member():
     db = get_db()
     if db.execute("SELECT id FROM members WHERE email = ?", (email,)).fetchone():
         return jsonify({"error": "Cette adresse email est déjà enregistrée."}), 409
+    if db.execute("SELECT id FROM members WHERE phone = ?", (phone,)).fetchone():
+        return jsonify({"error": "Ce numéro de téléphone est déjà enregistré."}), 409
 
     latitude, longitude = geocode(code_postal, ville)
     db.execute(
