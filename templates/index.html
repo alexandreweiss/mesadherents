@@ -240,6 +240,9 @@
       <label for="last_name">Nom</label>
       <input type="text" id="last_name" name="last_name" placeholder="Dupont" required autocomplete="family-name">
 
+      <label for="date_naissance">Date de naissance</label>
+      <input type="date" id="date_naissance" name="date_naissance" required autocomplete="bday">
+
       <label for="email">Adresse email</label>
       <input type="email" id="email" name="email" placeholder="marie@exemple.fr" required autocomplete="email">
 
@@ -251,6 +254,9 @@
       <select id="ville" name="ville" required disabled>
         <option value="">— Saisissez un code postal —</option>
       </select>
+
+      <input type="hidden" id="latitude" name="latitude">
+      <input type="hidden" id="longitude" name="longitude">
 
       <label for="phone">Téléphone</label>
       <input type="tel" id="phone" name="phone" placeholder="06 12 34 56 78" required autocomplete="tel">
@@ -309,6 +315,12 @@
     const cpInput = document.getElementById('code_postal');
     const villeSelect = document.getElementById('ville');
 
+    villeSelect.addEventListener('change', () => {
+      const opt = villeSelect.selectedOptions[0];
+      document.getElementById('latitude').value = opt?.dataset.lat || '';
+      document.getElementById('longitude').value = opt?.dataset.lng || '';
+    });
+
     cpInput.addEventListener('input', () => {
       const cp = cpInput.value.trim();
       if (cp.length !== 5 || !/^\d{5}$/.test(cp)) {
@@ -318,7 +330,7 @@
       }
       villeSelect.innerHTML = '<option value="">Chargement…</option>';
       villeSelect.disabled = true;
-      fetch(`https://geo.api.gouv.fr/communes?codePostal=${cp}&fields=nom&format=json`)
+      fetch(`https://geo.api.gouv.fr/communes?codePostal=${cp}&fields=nom,centre&format=json`)
         .then(r => r.json())
         .then(data => {
           if (!data.length) {
@@ -335,7 +347,17 @@
               opt.textContent = c.nom;
               villeSelect.appendChild(opt);
             });
-          if (data.length === 1) villeSelect.value = data[0].nom;
+          data.forEach(c => {
+            const opt = villeSelect.querySelector(`option[value="${c.nom}"]`);
+            if (opt && c.centre) {
+              opt.dataset.lat = c.centre.coordinates[1];
+              opt.dataset.lng = c.centre.coordinates[0];
+            }
+          });
+          if (data.length === 1) {
+            villeSelect.value = data[0].nom;
+            villeSelect.dispatchEvent(new Event('change'));
+          }
           villeSelect.disabled = false;
         })
         .catch(() => {

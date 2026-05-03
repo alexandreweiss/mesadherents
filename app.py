@@ -72,6 +72,7 @@ def init_db():
                 first_name TEXT NOT NULL,
                 last_name TEXT NOT NULL,
                 email TEXT NOT NULL UNIQUE,
+                date_naissance TEXT NOT NULL DEFAULT '',
                 phone TEXT NOT NULL,
                 code_postal TEXT NOT NULL DEFAULT '',
                 ville TEXT NOT NULL DEFAULT '',
@@ -82,12 +83,19 @@ def init_db():
                 image_rights INTEGER NOT NULL DEFAULT 0,
                 membership_amount INTEGER NOT NULL DEFAULT 0,
                 payment_method TEXT NOT NULL DEFAULT '',
+                latitude REAL,
+                longitude REAL,
                 joined_at DATETIME DEFAULT (datetime('now'))
             )
         """)
-        for col, default in [("code_postal", "''"), ("ville", "''"), ("whatsapp_gazette", 0), ("email_newsletter", 0), ("facebook_updates", 0), ("volunteer_contact", 0), ("image_rights", 0), ("membership_amount", 0), ("payment_method", "''")]:
+        for col, default in [("date_naissance", "''"), ("code_postal", "''"), ("ville", "''"), ("whatsapp_gazette", 0), ("email_newsletter", 0), ("facebook_updates", 0), ("volunteer_contact", 0), ("image_rights", 0), ("membership_amount", 0), ("payment_method", "''")]:
             try:
                 db.execute(f"ALTER TABLE members ADD COLUMN {col} NOT NULL DEFAULT {default}")
+            except sqlite3.OperationalError:
+                pass
+        for col in ("latitude", "longitude"):
+            try:
+                db.execute(f"ALTER TABLE members ADD COLUMN {col} REAL")
             except sqlite3.OperationalError:
                 pass
         db.commit()
@@ -179,7 +187,13 @@ def index():
     if request.method == "POST":
         first = request.form.get("first_name", "").strip()
         last = request.form.get("last_name", "").strip()
+        date_naissance = request.form.get("date_naissance", "").strip()
         email = request.form.get("email", "").strip().lower()
+        try:
+            latitude = float(request.form.get("latitude", ""))
+            longitude = float(request.form.get("longitude", ""))
+        except (ValueError, TypeError):
+            latitude = longitude = None
         phone = request.form.get("phone", "").strip()
         code_postal = request.form.get("code_postal", "").strip()
         ville = request.form.get("ville", "").strip()
@@ -192,7 +206,7 @@ def index():
         membership_amount = int(request.form.get("membership_amount", 0) or 0)
         payment_method = request.form.get("payment_method", "").strip()
 
-        if not all([first, last, email, phone, code_postal, ville]):
+        if not all([first, last, date_naissance, email, phone, code_postal, ville]):
             error = "Tous les champs sont obligatoires."
         else:
             db = get_db()
@@ -203,8 +217,8 @@ def index():
                 error = "Cette adresse email est déjà enregistrée."
             else:
                 db.execute(
-                    "INSERT INTO members (first_name, last_name, email, phone, code_postal, ville, whatsapp_gazette, email_newsletter, facebook_updates, volunteer_contact, image_rights, membership_amount, payment_method) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (first, last, email, phone, code_postal, ville, whatsapp, newsletter, facebook, volunteer, image_rights, membership_amount, payment_method),
+                    "INSERT INTO members (first_name, last_name, date_naissance, email, phone, code_postal, ville, whatsapp_gazette, email_newsletter, facebook_updates, volunteer_contact, image_rights, membership_amount, payment_method, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (first, last, date_naissance, email, phone, code_postal, ville, whatsapp, newsletter, facebook, volunteer, image_rights, membership_amount, payment_method, latitude, longitude),
                 )
                 db.commit()
                 return redirect(url_for("success"))
@@ -248,18 +262,18 @@ def admin():
 def admin_export():
     db = get_db()
     members = db.execute(
-        "SELECT first_name, last_name, email, phone, code_postal, ville, whatsapp_gazette, email_newsletter, facebook_updates, volunteer_contact, image_rights, membership_amount, payment_method, joined_at FROM members ORDER BY last_name, first_name"
+        "SELECT first_name, last_name, date_naissance, email, phone, code_postal, ville, whatsapp_gazette, email_newsletter, facebook_updates, volunteer_contact, image_rights, membership_amount, payment_method, joined_at FROM members ORDER BY last_name, first_name"
     ).fetchall()
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Prénom", "Nom", "Email", "Téléphone", "Code postal", "Ville", "Whatsapp Gazette", "Email Newsletter", "Facebook Updates", "Bénévolat", "Droit à l'image", "Montant adhésion", "Moyen de paiement", "Date d'inscription"])
+    writer.writerow(["Prénom", "Nom", "Date de naissance", "Email", "Téléphone", "Code postal", "Ville", "Whatsapp Gazette", "Email Newsletter", "Facebook Updates", "Bénévolat", "Droit à l'image", "Montant adhésion", "Moyen de paiement", "Date d'inscription"])
     for m in members:
         row = list(m)
-        row[6] = "Oui" if row[6] else "Non"
         row[7] = "Oui" if row[7] else "Non"
         row[8] = "Oui" if row[8] else "Non"
         row[9] = "Oui" if row[9] else "Non"
         row[10] = "Oui" if row[10] else "Non"
+        row[11] = "Oui" if row[11] else "Non"
         writer.writerow(row)
     output.seek(0)
     return Response(
@@ -306,6 +320,26 @@ def admin_delete(member_id):
     db.execute("DELETE FROM members WHERE id = ?", (member_id,))
     db.commit()
     return redirect(url_for("admin"))
+
+
+@app.route("/admin/map")
+@login_required
+def admin_map():
+    return render_template("admin_map.html")
+
+
+@app.route("/admin/map-data")
+@login_required
+def admin_map_data():
+    from flask import jsonify
+    db = get_db()
+    rows = db.execute(
+        "SELECT first_name, last_name, ville, latitude, longitude FROM members WHERE latitude IS NOT NULL AND longitude IS NOT NULL"
+    ).fetchall()
+    return jsonify([
+        {"name": f"{r['first_name']} {r['last_name']}", "ville": r["ville"], "lat": r["latitude"], "lng": r["longitude"]}
+        for r in rows
+    ])
 
 
 if __name__ == "__main__":
