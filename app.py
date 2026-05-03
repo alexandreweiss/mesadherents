@@ -112,6 +112,11 @@ def success():
     return render_template("success.html")
 
 
+@app.route("/guide")
+def guide():
+    return render_template("guide.html")
+
+
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     error = None

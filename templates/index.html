@@ -225,7 +225,10 @@
 
 <body>
   <div class="card">
-    <h1>Devenir membre</h1>
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:0.25rem;">
+      <h1>Devenir membre</h1>
+      <a href="/guide" target="_blank" style="font-size:0.8rem;color:#2563eb;text-decoration:none;">Guide d'utilisation ↗</a>
+    </div>
     <p class="subtitle">Remplissez le formulaire pour vous inscrire.</p>
     {% if error %}
     <div class="error">{{ error }}</div>
