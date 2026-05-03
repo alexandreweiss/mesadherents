@@ -1,7 +1,10 @@
 import os
 import csv
 import io
+import secrets
 import sqlite3
+import requests
+import msal
 from functools import wraps
 from flask import (
     Flask, render_template, request, redirect,
@@ -10,8 +13,39 @@ from flask import (
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "changeme-secret-key")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "LaPalette")
 DATABASE = os.environ.get("DATABASE", "members.db")
+
+AZURE_CLIENT_ID = os.environ.get("AZURE_CLIENT_ID", "")
+AZURE_TENANT_ID = os.environ.get("AZURE_TENANT_ID", "")
+AZURE_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET", "")
+AZURE_REDIRECT_URI = os.environ.get("AZURE_REDIRECT_URI", "http://localhost:5000/auth/callback")
+ADMIN_GROUP = "gs-mesadherents-admin"
+USER_GROUP = "gs-mesadherents-user"
+
+AUTHORITY = f"https://login.microsoftonline.com/{AZURE_TENANT_ID}"
+SCOPES = ["User.Read", "GroupMember.Read.All"]
+
+
+def get_msal_app():
+    return msal.ConfidentialClientApplication(
+        AZURE_CLIENT_ID,
+        authority=AUTHORITY,
+        client_credential=AZURE_CLIENT_SECRET,
+    )
+
+
+def get_user_groups(access_token):
+    headers = {"Authorization": f"Bearer {access_token}"}
+    groups = []
+    url = "https://graph.microsoft.com/v1.0/me/memberOf?$select=displayName&$top=100"
+    while url:
+        resp = requests.get(url, headers=headers, timeout=10)
+        if resp.status_code != 200:
+            break
+        data = resp.json()
+        groups.extend(item.get("displayName", "") for item in data.get("value", []))
+        url = data.get("@odata.nextLink")
+    return groups
 
 
 def get_db():
@@ -62,10 +96,81 @@ def init_db():
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not session.get("admin"):
-            return redirect(url_for("admin_login"))
+        if not session.get("is_admin"):
+            return redirect(url_for("auth_login"))
         return f(*args, **kwargs)
     return decorated
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("is_admin") and not session.get("is_user"):
+            return redirect(url_for("auth_login"))
+        return f(*args, **kwargs)
+    return decorated
+
+
+@app.route("/auth/login")
+def auth_login():
+    state = secrets.token_urlsafe(16)
+    session["auth_state"] = state
+    msal_app = get_msal_app()
+    auth_url = msal_app.get_authorization_request_url(
+        SCOPES,
+        state=state,
+        redirect_uri=AZURE_REDIRECT_URI,
+    )
+    return redirect(auth_url)
+
+
+@app.route("/auth/callback")
+def auth_callback():
+    if request.args.get("state") != session.get("auth_state"):
+        return render_template("admin_login.html", error="État invalide. Réessayez.")
+
+    error = request.args.get("error")
+    if error:
+        return render_template("admin_login.html", error=request.args.get("error_description", "Authentification échouée."))
+
+    code = request.args.get("code")
+    if not code:
+        return redirect(url_for("auth_login"))
+
+    msal_app = get_msal_app()
+    result = msal_app.acquire_token_by_authorization_code(
+        code,
+        scopes=SCOPES,
+        redirect_uri=AZURE_REDIRECT_URI,
+    )
+
+    if "error" in result:
+        return render_template("admin_login.html", error=result.get("error_description", "Authentification échouée."))
+
+    access_token = result["access_token"]
+    id_token_claims = result.get("id_token_claims", {})
+
+    user_groups = get_user_groups(access_token)
+    is_admin = ADMIN_GROUP in user_groups
+    is_user = USER_GROUP in user_groups
+
+    if not is_admin and not is_user:
+        return render_template("admin_login.html", error="Accès refusé. Vous n'appartenez pas à un groupe autorisé.")
+
+    session.pop("auth_state", None)
+    session["is_admin"] = is_admin
+    session["is_user"] = is_user
+    session["user_name"] = id_token_claims.get("name", "")
+    session["user_email"] = id_token_claims.get("preferred_username", "")
+
+    return redirect(url_for("admin"))
+
+
+@app.route("/auth/logout")
+def auth_logout():
+    session.clear()
+    post_logout = url_for("index", _external=True)
+    return redirect(f"{AUTHORITY}/oauth2/v2.0/logout?post_logout_redirect_uri={post_logout}")
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -117,25 +222,8 @@ def guide():
     return render_template("guide.html")
 
 
-@app.route("/admin/login", methods=["GET", "POST"])
-def admin_login():
-    error = None
-    if request.method == "POST":
-        if request.form.get("password") == ADMIN_PASSWORD:
-            session["admin"] = True
-            return redirect(url_for("admin"))
-        error = "Mot de passe incorrect."
-    return render_template("admin_login.html", error=error)
-
-
-@app.route("/admin/logout")
-def admin_logout():
-    session.pop("admin", None)
-    return redirect(url_for("admin_login"))
-
-
 @app.route("/admin")
-@admin_required
+@login_required
 def admin():
     db = get_db()
     q = request.args.get("q", "").strip()
@@ -193,8 +281,7 @@ def admin_export_payments():
     writer.writerow(["Prénom", "Nom", "Email", "Montant", "Moyen de paiement", "Date"])
     for p in payments:
         writer.writerow(list(p))
-    
-    # Add summary statistics
+
     output.write("\n\nRésumé par moyen de paiement:\n")
     summary = db.execute(
         "SELECT payment_method, COUNT(*), SUM(membership_amount) FROM members WHERE membership_amount > 0 GROUP BY payment_method"
@@ -203,7 +290,7 @@ def admin_export_payments():
     writer.writerow(["Moyen de paiement", "Nombre", "Total"])
     for s in summary:
         writer.writerow(list(s))
-    
+
     output.seek(0)
     return Response(
         output.getvalue(),

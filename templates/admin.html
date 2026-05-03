@@ -74,9 +74,12 @@
       <span class="badge">{{ count }}</span>
     </div>
     <div class="actions">
+      {% if session.get("is_admin") %}
       <a href="/admin/export" class="btn btn-export">Exporter Membres</a>
       <a href="/admin/export-payments" class="btn btn-export">Exporter Paiements</a>
-      <a href="/admin/logout" class="btn btn-logout">Déconnexion</a>
+      {% endif %}
+      <span style="font-size:0.82rem;color:#6b7280;align-self:center;">{{ session.get("user_name") or session.get("user_email") }}</span>
+      <a href="{{ url_for('auth_logout') }}" class="btn btn-logout">Déconnexion</a>
     </div>
   </div>
 
@@ -124,10 +127,12 @@
           <td>{{ m.payment_method if m.payment_method else "" }}</td>
           <td>{{ m.joined_at[:10] }}</td>
           <td>
+            {% if session.get("is_admin") %}
             <form method="post" action="/admin/delete/{{ m.id }}"
                   onsubmit="return confirm('Supprimer ce membre ?')">
               <button type="submit" class="btn btn-delete">Suppr.</button>
             </form>
+            {% endif %}
           </td>
         </tr>
         {% else %}

@@ -22,35 +22,41 @@
       padding: 2rem 1.5rem;
       width: 100%;
       max-width: 360px;
+      text-align: center;
     }
-    h1 { font-size: 1.3rem; font-weight: 700; margin-bottom: 1.25rem; color: #1a1a1a; }
-    label { display: block; font-size: 0.85rem; font-weight: 600; color: #444; margin-bottom: 0.3rem; }
-    input {
-      width: 100%; padding: 0.75rem 1rem; border: 1.5px solid #ddd;
-      border-radius: 8px; font-size: 1rem; -webkit-appearance: none;
-    }
-    input:focus { outline: none; border-color: #2563eb; }
+    h1 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem; color: #1a1a1a; }
+    p.subtitle { font-size: 0.875rem; color: #6b7280; margin-bottom: 1.5rem; }
     .error {
       background: #fef2f2; border: 1px solid #fca5a5;
       border-radius: 8px; padding: 0.75rem 1rem;
-      color: #dc2626; font-size: 0.9rem; margin-top: 0.75rem;
+      color: #dc2626; font-size: 0.9rem; margin-bottom: 1.25rem;
+      text-align: left;
     }
-    button {
-      width: 100%; margin-top: 1.25rem; padding: 0.85rem;
-      background: #1a1a1a; color: #fff; border: none;
-      border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;
+    .btn-ms {
+      display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+      width: 100%; padding: 0.75rem 1rem;
+      background: #2563eb; color: #fff; border: none;
+      border-radius: 8px; font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; text-decoration: none;
     }
+    .btn-ms:hover { background: #1d4ed8; }
+    .ms-logo { width: 18px; height: 18px; flex-shrink: 0; }
   </style>
 </head>
 <body>
   <div class="card">
     <h1>Administration</h1>
+    <p class="subtitle">Connexion via votre compte Microsoft</p>
     {% if error %}<div class="error">{{ error }}</div>{% endif %}
-    <form method="post">
-      <label for="password">Mot de passe</label>
-      <input type="password" id="password" name="password" required autofocus>
-      <button type="submit">Connexion</button>
-    </form>
+    <a href="{{ url_for('auth_login') }}" class="btn-ms">
+      <svg class="ms-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 21 21">
+        <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+        <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+        <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+        <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+      </svg>
+      Se connecter avec Microsoft
+    </a>
   </div>
 </body>
 </html>
