@@ -8,7 +8,7 @@ import msal
 from functools import wraps
 from flask import (
     Flask, render_template, request, redirect,
-    url_for, session, Response, g
+    url_for, session, Response, g, jsonify
 )
 
 app = Flask(__name__)
@@ -21,6 +21,8 @@ AZURE_CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET", "")
 AZURE_REDIRECT_URI = os.environ.get("AZURE_REDIRECT_URI", "http://localhost:5000/auth/callback")
 ADMIN_GROUP = "gs-mesadherents-admin"
 USER_GROUP = "gs-mesadherents-user"
+
+API_KEY = os.environ.get("API_KEY", "")
 
 AUTHORITY = f"https://login.microsoftonline.com/{AZURE_TENANT_ID}"
 SCOPES = ["User.Read", "GroupMember.Read.All"]
@@ -117,6 +119,30 @@ def login_required(f):
             return redirect(url_for("auth_login"))
         return f(*args, **kwargs)
     return decorated
+
+
+def api_key_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not API_KEY or request.headers.get("X-API-Key") != API_KEY:
+            return jsonify({"error": "Unauthorized"}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
+def geocode(code_postal, ville):
+    try:
+        resp = requests.get(
+            f"https://geo.api.gouv.fr/communes?codePostal={code_postal}&fields=nom,centre&format=json",
+            timeout=5,
+        )
+        for commune in resp.json():
+            if commune["nom"].lower() == ville.lower() and commune.get("centre"):
+                coords = commune["centre"]["coordinates"]
+                return coords[1], coords[0]
+    except Exception:
+        pass
+    return None, None
 
 
 @app.route("/auth/login")
@@ -340,6 +366,52 @@ def admin_map_data():
         {"name": f"{r['first_name']} {r['last_name']}", "ville": r["ville"], "lat": r["latitude"], "lng": r["longitude"]}
         for r in rows
     ])
+
+
+@app.route("/api/members/check")
+@api_key_required
+def api_check_member():
+    email = request.args.get("email", "").strip().lower()
+    if not email:
+        return jsonify({"error": "email required"}), 400
+    db = get_db()
+    exists = db.execute("SELECT id FROM members WHERE email = ?", (email,)).fetchone() is not None
+    return jsonify({"exists": exists})
+
+
+@app.route("/api/members", methods=["POST"])
+@api_key_required
+def api_register_member():
+    data = request.get_json(silent=True) or {}
+    first = data.get("first_name", "").strip()
+    last = data.get("last_name", "").strip()
+    date_naissance = data.get("date_naissance", "").strip()
+    email = data.get("email", "").strip().lower()
+    phone = data.get("phone", "").strip()
+    code_postal = data.get("code_postal", "").strip()
+    ville = data.get("ville", "").strip()
+    whatsapp = 1 if data.get("whatsapp_gazette") else 0
+    newsletter = 1 if data.get("email_newsletter") else 0
+    facebook = 1 if data.get("facebook_updates") else 0
+    volunteer = 1 if data.get("volunteer_contact") else 0
+    image_rights = 1 if data.get("image_rights") else 0
+    membership_amount = int(data.get("membership_amount", 0) or 0)
+    payment_method = data.get("payment_method", "").strip()
+
+    if not all([first, last, date_naissance, email, phone, code_postal, ville]):
+        return jsonify({"error": "Tous les champs sont obligatoires."}), 400
+
+    db = get_db()
+    if db.execute("SELECT id FROM members WHERE email = ?", (email,)).fetchone():
+        return jsonify({"error": "Cette adresse email est déjà enregistrée."}), 409
+
+    latitude, longitude = geocode(code_postal, ville)
+    db.execute(
+        "INSERT INTO members (first_name, last_name, date_naissance, email, phone, code_postal, ville, whatsapp_gazette, email_newsletter, facebook_updates, volunteer_contact, image_rights, membership_amount, payment_method, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (first, last, date_naissance, email, phone, code_postal, ville, whatsapp, newsletter, facebook, volunteer, image_rights, membership_amount, payment_method, latitude, longitude),
+    )
+    db.commit()
+    return jsonify({"message": f"{first} {last} inscrit(e) avec succès."}), 201
 
 
 if __name__ == "__main__":
