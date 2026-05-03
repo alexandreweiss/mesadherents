@@ -24,11 +24,45 @@ Cliquez sur **S'inscrire**. Une page de confirmation s'affiche en cas de succès
 
 ## Espace administrateur
 
-Accessible à l'adresse `/admin` (mot de passe requis).
+Accessible à l'adresse `/admin`. La connexion se fait via votre compte Microsoft (Entra ID).
 
-| Action | Description |
+### Niveaux d'accès
+
+| Groupe Entra ID | Accès |
 |---|---|
-| **Rechercher** | Cherchez par nom, prénom, email ou téléphone |
-| **Exporter Membres** | Télécharge la liste complète en CSV |
-| **Exporter Paiements** | Télécharge les paiements avec totaux par moyen |
-| **Supprimer** | Supprime définitivement un membre |
+| `gs-mesadherents-admin` | Consultation, export CSV, suppression |
+| `gs-mesadherents-user` | Consultation uniquement |
+
+### Actions disponibles
+
+| Action | Description | Rôle requis |
+|---|---|---|
+| **Rechercher** | Cherchez par nom, prénom, email ou téléphone | Tous |
+| **Exporter Membres** | Télécharge la liste complète en CSV | Admin |
+| **Exporter Paiements** | Télécharge les paiements avec totaux par moyen | Admin |
+| **Supprimer** | Supprime définitivement un membre | Admin |
+
+---
+
+## Configuration (déploiement)
+
+Copiez `.env.example` en `.env` et renseignez les valeurs :
+
+```
+SECRET_KEY=        # clé secrète Flask (chaîne aléatoire)
+DATABASE=          # chemin vers la base SQLite (ex: /data/members.db)
+AZURE_CLIENT_ID=   # ID de l'application Entra ID
+AZURE_TENANT_ID=   # ID du tenant Entra ID
+AZURE_CLIENT_SECRET= # secret client de l'application
+AZURE_REDIRECT_URI=  # URI de callback (ex: http://localhost/auth/callback)
+```
+
+### Permissions API requises (Entra ID)
+
+L'application Entra ID doit avoir la permission déléguée **`GroupMember.Read.All`** avec consentement administrateur accordé.
+
+### Lancement
+
+```bash
+docker compose up --build -d
+```
