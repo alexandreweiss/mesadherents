@@ -74,7 +74,8 @@
       <span class="badge">{{ count }}</span>
     </div>
     <div class="actions">
-      <a href="/admin/export" class="btn btn-export">Exporter CSV</a>
+      <a href="/admin/export" class="btn btn-export">Exporter Membres</a>
+      <a href="/admin/export-payments" class="btn btn-export">Exporter Paiements</a>
       <a href="/admin/logout" class="btn btn-logout">Déconnexion</a>
     </div>
   </div>
@@ -94,8 +95,13 @@
           <th>Téléphone</th>
           <th>CP</th>
           <th>Ville</th>
-          <th>WhatsApp Gazette</th>
-          <th>Newsletter</th>
+          <th>WhatsApp</th>
+          <th>Email</th>
+          <th>Facebook</th>
+          <th>Bénévolat</th>
+          <th>Image</th>
+          <th>Cotisation</th>
+          <th>Paiement</th>
           <th>Inscription</th>
           <th></th>
         </tr>
@@ -111,6 +117,11 @@
           <td>{{ m.ville }}</td>
           <td>{{ "✓" if m.whatsapp_gazette else "" }}</td>
           <td>{{ "✓" if m.email_newsletter else "" }}</td>
+          <td>{{ "✓" if m.facebook_updates else "" }}</td>
+          <td>{{ "✓" if m.volunteer_contact else "" }}</td>
+          <td>{{ "✓" if m.image_rights else "" }}</td>
+          <td>{{ (m.membership_amount | string + "€") if m.membership_amount > 0 else "" }}</td>
+          <td>{{ m.payment_method if m.payment_method else "" }}</td>
           <td>{{ m.joined_at[:10] }}</td>
           <td>
             <form method="post" action="/admin/delete/{{ m.id }}"
@@ -120,7 +131,7 @@
           </td>
         </tr>
         {% else %}
-        <tr><td colspan="10" class="empty">Aucun membre trouvé.</td></tr>
+        <tr><td colspan="15" class="empty">Aucun membre trouvé.</td></tr>
         {% endfor %}
       </tbody>
     </table>
