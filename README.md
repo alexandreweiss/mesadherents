@@ -5,10 +5,11 @@
 Ouvrez l'application dans votre navigateur et remplissez le formulaire :
 
 1. **Prénom et Nom**
-2. **Adresse email** — doit être unique, un email déjà enregistré sera refusé
-3. **Code postal** — saisissez 5 chiffres, la liste des villes se charge automatiquement
-4. **Ville** — choisissez dans la liste
-5. **Téléphone**
+2. **Date de naissance**
+3. **Adresse email** — doit être unique, un email déjà enregistré sera refusé
+4. **Code postal** — saisissez 5 chiffres, la liste des villes se charge automatiquement
+5. **Ville** — choisissez dans la liste
+6. **Téléphone** — doit être unique, un numéro déjà enregistré sera refusé
 
 Cochez ensuite les options souhaitées :
 
